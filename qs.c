@@ -52,7 +52,7 @@ uint64_t nb_qr_primes;              	/* number of primes p where N is a quadrati
 uint64_t *primes;						/* array holding the primes of the smoothness base */
 
 smooth_number_t *smooth_numbers;
-int NB_VECTORS_OFFSET = 10;          /* number of additional rows in the matrix, to make sure that a linear relation exists */
+int NB_VECTORS_OFFSET = 5;          /* number of additional rows in the matrix, to make sure that a linear relation exists */
 
 
 //-----------------------------------------------------------
