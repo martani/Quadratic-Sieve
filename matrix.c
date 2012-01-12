@@ -25,8 +25,6 @@ void push_row(matrix_t *matrix, mpz_t row)
 {
 	mpz_set(matrix->MATRIX[matrix->next_free_row], row);
 
-	//matrix->IDENTITY[matrix->next_free_row] = (mpz_t)malloc(sizeof(mpz_t));
-
 	mpz_init2(matrix->IDENTITY[matrix->next_free_row], matrix->cols);		/* initializes a n bit vector all set to 0 */
 	mpz_setbit(matrix->IDENTITY[matrix->next_free_row], matrix->next_free_row);		/* set the next_free_row bit to 1 */
 	matrix->next_free_row++;

@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 		exit(2);
 	}
 
-	printf("Factoring %s ..\n", mpz_get_str(NULL, 10, n));
+	printf("Factorizing %s ..\n", mpz_get_str(NULL, 10, n));
 
 	//a belongs to [1, n-2]
 	//u, v <-> s belongs to [0, n-1]

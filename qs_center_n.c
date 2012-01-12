@@ -45,7 +45,7 @@ typedef struct {
                                      */
 } smooth_number_t;
 
-mpz_t N;                            /* number to factor */
+mpz_t N;                            /* number to factorize */
 matrix_t matrix;
 
 uint64_t nb_smooth_numbers_found = 0;
@@ -531,7 +531,7 @@ while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
 //--------------------------------------------------------
     //We use the last linear relation to reconstruct our solution
     START_TIMER();
-    printf("\nFactoring..\n");
+    printf("\nFactorizing..\n");
     mpz_t solution_X, solution_Y;
     mpz_init(solution_X); mpz_init(solution_Y);
 
@@ -580,7 +580,7 @@ while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
     sprintf(s, "****** TOTAL TIME: %.3f ms\n", elapsed.tv_sec * 1000 + elapsed.tv_usec / (double) 1000);
     APPEND_TO_LOG_FILE(s);*/
     
-    STOP_TIMER_PRINT_TIME("\nFactoring done");
+    STOP_TIMER_PRINT_TIME("\nFactorizing done");
 
     printf("Cleaning memory..\n");
 

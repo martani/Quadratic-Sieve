@@ -39,7 +39,7 @@ typedef struct {
 	uint64_t *factors_exp;			/* holds the exponents of the factors of value_x_squared */
 } smooth_number_t;
 
-mpz_t N;                            /* number to factor */
+mpz_t N;                            /* number to factorize */
 matrix_t matrix;
 
 uint64_t nb_smooth_numbers_found = 0;
@@ -446,7 +446,7 @@ while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
 //--------------------------------------------------------
 	//We use the last linear relation to reconstruct our solution
 	START_TIMER();
-	printf("\nFactoring..\n");
+	printf("\nFactorizing..\n");
 	mpz_t solution_X, solution_Y;
 	mpz_init(solution_X); mpz_init(solution_Y);
 
@@ -484,7 +484,7 @@ while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
 	printf("\n>>>>>>>>>>> FACTORED %s =\n", mpz_get_str(NULL, 10, N));
 	printf("\tFactor 1: %s \n\tFactor 2: %s", mpz_get_str(NULL, 10, solution_X), mpz_get_str(NULL, 10, solution_Y));
 
-	STOP_TIMER_PRINT_TIME("\nFactoring done");
+	STOP_TIMER_PRINT_TIME("\nFactorizing done");
 
 	printf("Cleaning memory..\n");
 
