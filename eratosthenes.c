@@ -5,7 +5,6 @@
  *      Author: martani
  */
 /* eratosthenes sieve to calculate primes under a certain Base
- * a modified version from https://github.com/merimus/Programmers-Dojo/
  */
 
 #include <stdio.h>
