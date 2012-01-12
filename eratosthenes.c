@@ -1,4 +1,12 @@
-//earatosthenes sieve from modified from https://github.com/merimus/Programmers-Dojo/
+/*
+ * matrix.c
+ *
+ *  Created on: Jan 7, 2012
+ *      Author: martani
+ */
+/* eratosthenes sieve to calculate primes under a certain Base
+ * a modified version from https://github.com/merimus/Programmers-Dojo/
+ */
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -7,9 +15,6 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <gmp.h>
-
-#define THOUSAND 1000
-#define MILLION 1000000
 
 #define GET_BIT_AT(index) ((numbers[index>>3] & (1<<(index&7))) >> (index&7))
 #define SET_BIT_AT(index) (numbers[index>>3] |= (1 << (index&7)))
@@ -32,21 +37,16 @@ int64_t sieve_primes_up_to(int64_t base)
 	base_ref = base;
 
 	for (i = 0; i < base; i++)
-		//numbers[i] = 1;
 		SET_BIT_AT(i);
 
 	int64_t p = 2;
 	num_primes++;
 	int64_t offset;
 
-	/*printf("BASE %" PRId64 "\n", base);
-	printf("I %" PRId64 "\n", i);*/
-
 	while (1) {
 		offset = 2 * p;
 
 		while (offset < base) {
-			//numbers[offset] = 0;
 			CLEAR_BIT_AT(offset);
 			offset += p;
 		}
@@ -76,7 +76,6 @@ void fill_primes(int64_t *primes_array)
 	for (j = 0, i = 2; i < base_ref; i++) {
 		if (GET_BIT_AT(i) == 1) {
 			primes_array[j] = i;
-			//printf("%" PRId64 "\n", primes[j]);
 			j++;
 		}
 	}
@@ -84,7 +83,7 @@ void fill_primes(int64_t *primes_array)
 	free(numbers);
 }
 
-/* Fill the array with only primes where n is a quadratic residue */
+/* Fill the array with only primes where n is a quadratic residue: x² = n (mod p) */
 int fill_primes_with_quadratic_residue(int64_t *primes_array, mpz_t n)
 {
 	int64_t j, i;

@@ -1,8 +1,8 @@
 /*
- * matrix.h
+ * matrix.c
  *
  *  Created on: Jan 7, 2012
- *      Author: sky
+ *      Author: martani
  */
 
 #include <gmp.h>
@@ -43,5 +43,7 @@ void gauss_elimination(matrix_t *matrix);
 void get_matrix_row(mpz_t rop, matrix_t *matrix, uint64_t row_index);
 
 void get_identity_row(mpz_t rop, matrix_t *matrix, uint64_t row_index);
+
+int test();
 
 #endif /* MATRIX_H_ */

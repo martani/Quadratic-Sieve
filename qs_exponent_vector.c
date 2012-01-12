@@ -1,10 +1,14 @@
 /*
- * qs.c
+ * qs_exponent_vector.c
  *
  *  Created on: Dec 25, 2011
  *      Author: martani
  */
-/*-------------- Factor numbers with the Quadratic Sieve method --------------*/
+
+/*-------------- This version keeps track of the exponents vector, consumes huge memory, good for testing only
+ *-------------- consider using qs.c for handling relatively large numbers. That version only keeps a vector of
+ *-------------- 0, 1 bits vector for each smooth number
+ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,18 +34,9 @@ typedef struct modular_root{
 } modular_root_t;
 
 typedef struct {
-    mpz_t value_x;
-    mpz_t value_x_squared;
-    /* uint64_t *factors_exp;      /* this can be used to keep track for the full factorization of
-    								* an element x²-n. For the use of this version, refer to the
-    								* qs_exponent_vector.c version
-    								*/
-
-    mpz_t factors_vect;             /* this nb_primes_in_base bit vector is a substitute of the
-                                     * factors_exp array, all we actually need for the elimination
-                                     * in the Linear algebra step is the exponents modulo 2. 
-                                     * This saves huge space within the sieving step
-                                     */
+	mpz_t value_x;
+	mpz_t value_x_squared;
+	uint64_t *factors_exp;			/* holds the exponents of the factors of value_x_squared */
 } smooth_number_t;
 
 mpz_t N;                            /* number to factor */
@@ -53,7 +48,6 @@ uint64_t *primes;						/* array holding the primes of the smoothness base */
 
 smooth_number_t *smooth_numbers;
 int NB_VECTORS_OFFSET = 10;          /* number of additional rows in the matrix, to make sure that a linear relation exists */
-
 
 //-----------------------------------------------------------
 // base <- exp((1/2) sqrt(ln(n) ln(ln(n))))
@@ -90,13 +84,13 @@ void get_sieving_start_index(mpz_t res, mpz_t start, mpz_t p, unsigned long root
 	if(mpz_cmp_ui(r, 0) != 0)
 		mpz_add_ui(q, q, 1);
 
-	mpz_mul(q, q, p);			/* next element p*q+root that is directly >= start */
+	mpz_mul(q, q, p);			/*next element p*q+root that is directly >= start*/
 	mpz_add_ui(q, q, root);
 	mpz_set(res, q);
 	mpz_clear(q); mpz_clear(r);
 }
 
-// given an array of exponents of factors on the base [primes], reconstructs the number
+//given an array of exponents of factors on the base [primes], reconstructs the number
 void reconstruct_mpz(mpz_t rop, uint64_t *factors_exp)
 {
 	uint64_t i;
@@ -114,45 +108,43 @@ void reconstruct_mpz(mpz_t rop, uint64_t *factors_exp)
 	mpz_set(rop, t);
 }
 
-// save the sooth number n to the smooth_numbers array, and at the same time its exponents vector to the matrix
+// save the sooth number n to the smooth_numbers array, and construct at the same time to the matrix
+//TODO save smooth numbers on disk, or just save the exponents in the GF2 matrix
 mpz_t tmp_matrix_row;
 void save_smooth_number(smooth_number_t n)
 {
-    mpz_clear(tmp_matrix_row);							/* tmp_matrix_row must be initialized already */
-    mpz_init2(tmp_matrix_row, nb_qr_primes);			/* init a vector of *exactly* nb_qr_primes bits */
+	mpz_clear(tmp_matrix_row);										/* tmp_matrix_row must be initialized already */
+	mpz_init2(tmp_matrix_row, nb_qr_primes);
 
-    if(nb_smooth_numbers_found > nb_qr_primes + NB_VECTORS_OFFSET - 1)     /* if we have sufficient smooth numbers, skip saving */
-        return;
+	if(nb_smooth_numbers_found > nb_qr_primes + NB_VECTORS_OFFSET)		/* if we have sufficient smooth numbers, skip saving */
+		return;
 
-    smooth_number_t tmp;
-    mpz_init(tmp.value_x);
-    mpz_init(tmp.value_x_squared);
+	smooth_number_t tmp;
+	mpz_init(tmp.value_x);
+	mpz_init(tmp.value_x_squared);
 
-    mpz_set(tmp.value_x, n.value_x);
-    mpz_pow_ui(tmp.value_x_squared, n.value_x, 2);
-    mpz_sub(tmp.value_x_squared, tmp.value_x_squared, N);           /* x²-N. Saving this will enable us to not go through exponents
-                                                                     * and reconstruct the original number */
+	mpz_set(tmp.value_x, n.value_x);
+	mpz_pow_ui(tmp.value_x_squared, n.value_x, 2);
+	mpz_sub(tmp.value_x_squared, tmp.value_x_squared, N);			/* saving this will enable us to not go through exponents
+	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	   and reconstruct the original number */
 
-    /* otherwise we can reconstruct value_x_squared from the exponents vector, this is useful in the factoring step
-     * to calculate the square modulo N from the factors directly.
-     * It takes a lot of space, doesn't woth it anyways */
+	/* otherwise we can reconstruct value_x_squared from the exponents vector, this is useful in the factoring step
+	 * to calculate teh square modulo N from the factors firectly.
+	 * It takes a lot of space, doesn't woth it maybe */
+	//tmp.factors_exp = calloc(nb_qr_primes, sizeof(uint64_t));
+	//memcpy(tmp.factors_exp, n.factors_exp, nb_qr_primes * sizeof(uint64_t));
+	//reconstruct_mpz(tmp.value_x_squared, tmp.factors_exp);
 
-    //tmp.factors_exp = calloc(nb_qr_primes, sizeof(uint64_t));
-    //memcpy(tmp.factors_exp, n.factors_exp, nb_qr_primes * sizeof(uint64_t));
-    //reconstruct_mpz(tmp.value_x_squared, tmp.factors_exp);
+	smooth_numbers[nb_smooth_numbers_found++] = tmp;
 
-    smooth_numbers[nb_smooth_numbers_found++] = tmp;
-
-    /*** reconstruct and saves the smooth number to the GF2 matrix ***/		/* already done in the sieving step */
-    /* uint64_t i;
-    for(i=0; i<nb_qr_primes; i++)
-    {
-        if(n.factors_exp[i]&1)
-            mpz_setbit(tmp_matrix_row, i);
-    }*/
-    
-    /* the coefficient vector in GF2 has already been constructed */
-    push_row(&matrix, n.factors_vect);
+	/*** reconstruct and saves the smooth number to the GF2 matrix ***/
+	uint64_t i;
+	for(i=0; i<nb_qr_primes; i++)
+	{
+		if(n.factors_exp[i]&1)
+			mpz_setbit(tmp_matrix_row, i);
+	}
+	push_row(&matrix, tmp_matrix_row);
 }
 
 void print_lib_version()
@@ -178,31 +170,14 @@ void STOP_TIMER_PRINT_TIME(char *s)
 {
 	gettimeofday(&end, NULL);
 	timersub(&end, &start, &elapsed);
-	printf("%s [Time: %.3f ms]\n", s, elapsed.tv_sec * 1000 + elapsed.tv_usec / (double) 1000);
-}
-
-FILE *fp;
-void OPEN_LOG_FILE(char *file_name)
-{
-	char s[512];
-	sprintf(s, "%s_%s_exp", file_name, mpz_get_str(NULL, 10, N));
-    if((fp=fopen(s, "w")) == NULL) {
-        printf("Cannot open file.\n");
-    fp = NULL;
-  }
-}
-
-void APPEND_TO_LOG_FILE(char *text)
-{
-  if(fp != NULL)
-    fprintf(fp, "%s\n", text);
+	printf("%s | Time: %.3f ms\n", s, elapsed.tv_sec * 1000 + elapsed.tv_usec / (double) 1000);
 }
 
 int main(int argc, char **argv)
 {
 	gettimeofday(&start_global, NULL);
 	print_lib_version();
-        
+
 	mpz_init(N);
 	mpz_t B; mpz_init(B);
 
@@ -211,6 +186,9 @@ int main(int argc, char **argv)
 	modular_root_t *modular_roots;
 
 	uint64_t i, j;
+
+	//mpz_init_set_str(n, "1522605027922533360535618378132637429718068114961380688657908494580122963258952897654000350692006139", 10);
+	//mpz_init_set_str(N, "5705979550618670446308578858542675373983", 10); //"23205546691784530035989723015867", 10); // "1523336689369217", 10); // 12342359 * 123423463 //101011010010111011101110110001111100100000010000001 (51 bit)
 
 	if(mpz_init_set_str(N, argv[1], 10) == -1)
 	{
@@ -228,21 +206,18 @@ int main(int argc, char **argv)
 		printf("\n<<<[FACTOR]>>> %s\n", mpz_get_str(NULL, 10, sqrtN));
 		return 0;
 	}
-
 	if(mpz_probab_prime_p(N, 10) > 0)		/* don't bother factoring */
 	{
 		printf("N:%s is prime\n", mpz_get_str(NULL, 10, N));
 		exit(0);
 	}
 
-    OPEN_LOG_FILE("freq");
-    
 //--------------------------------------------------------
 //  calculate the smoothness base for the given N
 //--------------------------------------------------------
-	get_smoothness_base(B, N);			/* if N is too small, the program will surely fail, please consider a pen and paper instead */
+	get_smoothness_base(B, N);								/* if N is too small, the program will surely fail, please consider a pen and paper instead */
 	uBase = mpz_get_ui(B);
-	printf("n: %s\tBase: %s\n", mpz_get_str(NULL, 10, N), mpz_get_str(NULL, 10, B));
+	printf("N: %s\tBase: %s\n", mpz_get_str(NULL, 10, N), mpz_get_str(NULL, 10, B));
 
 //--------------------------------------------------------
 // sieve primes that are less than the smoothness base using Eratosthenes sieve
@@ -305,7 +280,7 @@ int main(int argc, char **argv)
 	START_TIMER();
 
 	mpz_t x, sieving_index, next_sieving_index;
-	unsigned long ui_index, SIEVING_STEP = 50000;				/* we sieve for 50000 elements at each loop */
+	unsigned long ui_index, SIEVING_STEP = 50000;				/* we sieve for 50000 elements at each loop*/
 	uint64_t p_pow;
 	smooth_number_t *x_squared;
 
@@ -327,25 +302,18 @@ int main(int argc, char **argv)
 	{
 		mpz_init(x_squared[i].value_x);
 		mpz_init(x_squared[i].value_x_squared);
-        
-        /* the factors_exp array is used to keep track of exponents */
-		//x_squared[i].factors_exp = calloc(nb_qr_primes, sizeof(uint64_t));
 
-        /* we use directly the exponents vector modulo 2 to preserve space */
-        mpz_init2(x_squared[i].factors_vect, nb_qr_primes);
+		x_squared[i].factors_exp = calloc(nb_qr_primes, sizeof(uint64_t));
+
 		mpz_add_ui(x, x, 1);
 	}
-
-    int nb_smooth_per_round = 0;
-    char s[512];
 
 //--------------------------------------------------------
 // WHILE smooth numbers found less than the primes in the smooth base + NB_VECTORS_OFFSET
 //--------------------------------------------------------
 while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
 {
-    nb_smooth_per_round = 0;
-	mpz_set(x, next_sieving_index);					/* sieve numbers from sieving_index to sieving_index + sieving_step */
+	mpz_set(x, next_sieving_index);						/* sieve numbers from sieving_index to sieving_index + sieving_step */
 	mpz_set(sieving_index, next_sieving_index);
 
 	printf("\r");
@@ -358,20 +326,17 @@ while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
 	{
 		mpz_set(x_squared[i].value_x, x);
 
-		mpz_pow_ui(x_squared[i].value_x_squared, x, 2);							/* calculate value_x_squared <- x²-n */
+		mpz_pow_ui(x_squared[i].value_x_squared, x, 2);				/* calculate value_x_squared <- x²-n */
 		mpz_sub(x_squared[i].value_x_squared, x_squared[i].value_x_squared, N);
 
-		mpz_clear(x_squared[i].factors_vect);
-        mpz_init2(x_squared[i].factors_vect, nb_qr_primes);						/* reconstruct a new fresh 0ed vector of size nb_qr_primes bits */
-        
+		memset(x_squared[i].factors_exp, 0, nb_qr_primes * sizeof(uint64_t));
 		mpz_add_ui(x, x, 1);
 	}
 	mpz_set(next_sieving_index, x);
 
 //--------------------------------------------------------
-// eliminate factors in the x_squared array, those who are 'destructed' to 1 are smooth
+// here we eliminate factors in the x_squared array, those who are 'destructed' to 1 are smooth
 //--------------------------------------------------------
-
 	for(i=0; i<nb_qr_primes; i++)
 	{
 		mpz_set_ui(p, (unsigned long)primes[i]);
@@ -382,24 +347,25 @@ while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
 		 * are also multiples of p */
 		get_sieving_start_index(x, x, p, modular_roots[i].root1);
 		mpz_set(str, x);
-		mpz_sub(x, x, sieving_index);							/* x contains index of first number that is divisible by p */
+		mpz_sub(x, x, sieving_index);							/* x contains index of first number that is divisible by p*/
+
+		//printf("%u: j = [", modular_roots[i].root1);
 
 		for(j = mpz_get_ui(x); j < SIEVING_STEP; j += primes[i])
 		{
+			//printf("%s,", mpz_get_str(NULL, 10, str));
 			p_pow = mpz_remove(x_squared[j].value_x_squared, x_squared[j].value_x_squared, p);		/* eliminate all factors of p */
-            
-            if(p_pow&1)                     /* mark bit if odd power of p exists in this x_squared[j] */
-            {
-              mpz_setbit(x_squared[j].factors_vect, i);
-            }
-            
+			x_squared[j].factors_exp[i] = p_pow;									/* store the exponent of factor p in x_squared[j] */
+
 			if(mpz_cmp_ui(x_squared[j].value_x_squared, 1) == 0)
 			{
 				save_smooth_number(x_squared[j]);
-                nb_smooth_per_round++;
+				//printf("[SMOOTH] %s\n", mpz_get_str(NULL, 10, x_squared[j].value));
 			}
 			/* sieve next element located p steps from here */
+			mpz_add(str, str, p);
 		}
+		//printf("]\n");
 
 		/* same goes for root2 */
 		if(modular_roots[i].root2 == modular_roots[i].root1)
@@ -411,35 +377,47 @@ while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
 		mpz_set(str, x);
 		mpz_sub(x, x, sieving_index);
 
+		//printf("%u: j = [", modular_roots[i].root2);
+
 		for(j = mpz_get_ui(x); j < SIEVING_STEP; j += primes[i])
 		{
+			//printf("%s,", mpz_get_str(NULL, 10, str));
 			p_pow = mpz_remove(x_squared[j].value_x_squared, x_squared[j].value_x_squared, p);
+			x_squared[j].factors_exp[i] = p_pow;
 
-            if(p_pow&1)
-            {
-              mpz_setbit(x_squared[j].factors_vect, i);
-            }
-            
 			if(mpz_cmp_ui(x_squared[j].value_x_squared, 1) == 0)
 			{
 				save_smooth_number(x_squared[j]);
-                nb_smooth_per_round++;
+				//printf("[SMOOTH] %s\n", mpz_get_str(NULL, 10, x_squared[j].value));
 			}
+
+			mpz_add(str, str, p);
 		}
+		//printf("]\n");
 	}
 	//printf("\tSmooth numbers found %" PRId64 "\n", nb_smooth_numbers_found);
-    /*sprintf(s, "[start: %s - end: %s - step: %" PRId64 "] nb_smooth_per_round: %d",
-           mpz_get_str(NULL, 10, sieving_index),
-           mpz_get_str(NULL, 10, next_sieving_index),
-           SIEVING_STEP,
-           nb_smooth_per_round);
-    APPEND_TO_LOG_FILE(s);*/
 }
 
 	STOP_TIMER_PRINT_TIME("\nSieving DONE");
 
 	uint64_t t = 0;
-    
+
+	/* show the smooth numbers and their factorization */
+	/*for(j=0, i=0; i<nb_smooth_numbers_found; i++)
+	{
+		printf("%15s =\t\t[", mpz_get_str(NULL, 10, smooth_numbers[i].value_x_squared));
+
+		for(t=0; t<nb_qr_primes; t++)
+		{
+			//printf("%" PRId64 "^%" PRId64 " * ", primes[t], smooth_numbers[i].factors_exp[t]);
+			printf("%2" PRId64 "", smooth_numbers[i].factors_exp[t]);
+		}
+		printf("]\n");
+		j++;
+	}*/
+
+	//printf("\n%" PRId64 " smooth numbers found", j);
+
 //--------------------------------------------------------
 //the matrix ready, start Gauss elimination. The Matrix is filled on the call of save_smooth_number()
 //--------------------------------------------------------
@@ -454,7 +432,7 @@ while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
 	mpz_t linear_relation_z, solution_z;
 	mpz_init(linear_relation_z); mpz_init(solution_z);
 
-	get_matrix_row(linear_relation_z, &matrix, row_index--);			/* get the last few rows in the Gauss eliminated matrix*/
+	get_matrix_row(linear_relation_z, &matrix, row_index--);			/* get the last few rows in the gauss eliminated matrix*/
 	while(mpz_cmp_ui(linear_relation_z, 0) == 0)
 	{
 		nb_linear_relations++;
@@ -472,30 +450,27 @@ while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
 	mpz_t solution_X, solution_Y;
 	mpz_init(solution_X); mpz_init(solution_Y);
 
-    /* we start testing from the first linear relation encountered in the matrix */
-    for(j = nb_linear_relations; j>0; j--)
+	for(j=0; j<nb_linear_relations; j++)
 	{
-        printf("Trying %d..\n", nb_linear_relations - j + 1);
+		printf("Trying %d..\n", j+1);
 		mpz_set_ui(solution_X, 1);
 		mpz_set_ui(solution_Y, 1);
 
-		get_identity_row(solution_z, &matrix, nb_qr_primes + NB_VECTORS_OFFSET - j + 1);
+		get_identity_row(solution_z, &matrix, nb_qr_primes + NB_VECTORS_OFFSET - (j + 1));
 
 		for(i=0; i<nb_qr_primes; i++)
 		{
 			if(mpz_tstbit(solution_z, i))
 			{
 				mpz_mul(solution_X, solution_X, smooth_numbers[i].value_x);
-				mpz_mod(solution_X, solution_X, N);				/* reduce x to modulo N */
+				mpz_mod(solution_X, solution_X, N);							/* reduce x to modulo N */
 
-                mpz_mul(solution_Y, solution_Y, smooth_numbers[i].value_x_squared);
-                /*TODO: handling huge stuff here, there is no modulo N like in the solution_X case!
-                 * eliminate squares as long as you go*/
+				mpz_mul(solution_Y, solution_Y, smooth_numbers[i].value_x_squared);		/* we can start calculating squares from the exponents vector here */
 			}
 		}
 
 		mpz_sqrt(solution_Y, solution_Y);
-		mpz_mod(solution_Y, solution_Y, N);		/* y = sqrt(MUL(xi²-n)) mod N */
+		mpz_mod(solution_Y, solution_Y, N);		/* y = sqrt(MUL(xi²-n)) mod N*/
 
 		mpz_sub(solution_X, solution_X, solution_Y);
 
@@ -509,16 +484,6 @@ while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
 	printf("\n>>>>>>>>>>> FACTORED %s =\n", mpz_get_str(NULL, 10, N));
 	printf("\tFactor 1: %s \n\tFactor 2: %s", mpz_get_str(NULL, 10, solution_X), mpz_get_str(NULL, 10, solution_Y));
 
-	/*sprintf(s, "\n>>>>>>>>>>> FACTORED %s =\n", mpz_get_str(NULL, 10, N));
-	APPEND_TO_LOG_FILE(s);
-    sprintf(s, "\tFactor 1: %s \n\tFactor 2: %s", mpz_get_str(NULL, 10, solution_X), mpz_get_str(NULL, 10, solution_Y));
-	APPEND_TO_LOG_FILE(s);
-    
-    gettimeofday(&end_global, NULL);
-    timersub(&end_global, &start_global, &elapsed);
-    sprintf(s, "****** TOTAL TIME: %.3f ms\n", elapsed.tv_sec * 1000 + elapsed.tv_usec / (double) 1000);
-    APPEND_TO_LOG_FILE(s);*/
-    
 	STOP_TIMER_PRINT_TIME("\nFactoring done");
 
 	printf("Cleaning memory..\n");
@@ -528,8 +493,7 @@ while(nb_smooth_numbers_found < nb_qr_primes + NB_VECTORS_OFFSET)
 	{
 		mpz_clear(x_squared[i].value_x);
 		mpz_clear(x_squared[i].value_x_squared);
-		//free(x_squared[i].factors_exp);
-        mpz_clear(x_squared[i].factors_vect);
+		free(x_squared[i].factors_exp);
 	}
 	free(x_squared);
 	/********************** clear the x_squared array **********************/

@@ -2,7 +2,7 @@
  * matrix.c
  *
  *  Created on: Jan 7, 2012
- *      Author: sky
+ *      Author: martani
  */
 #include <stdlib.h>
 #include <stdio.h>
@@ -124,7 +124,7 @@ void get_identity_row(mpz_t rop, matrix_t *matrix, uint64_t row_index)
 	mpz_set(rop, matrix->IDENTITY[row_index]);
 }
 
-int main_(int argc, char **argv)
+int test()
 {
 	matrix_t matrix;
 

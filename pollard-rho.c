@@ -1,5 +1,6 @@
 /*
  * pollard-rho.c
+ *
  *  Created on: Dec 20, 2011
  *      Author: martani
  */
@@ -42,8 +43,7 @@ int main(int argc, char **argv)
 		exit(2);
 	}
 
-
-        //if p q are provided
+    //if p q are provided
 	if(argc == 3)
 	{
 		mpz_t p, q;
