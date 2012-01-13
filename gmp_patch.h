@@ -2,8 +2,9 @@
  * gmp_patch.h
  *
  *  Created on: Dec 26, 2011
- *      Author: sky
+ *      Author: martani
  */
+
 #include <gmp.h>
 
 #ifndef GMP_PATCH_H_
