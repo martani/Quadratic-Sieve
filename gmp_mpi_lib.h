@@ -1,5 +1,5 @@
 /*
- * qs.c
+ * gmp_mpi_lib.h
  *
  *  Created on: Jan 12, 2012
  *      Author: martani

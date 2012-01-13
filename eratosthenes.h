@@ -1,5 +1,5 @@
 /*
- * matrix.c
+ * eratosthenes.h
  *
  *  Created on: Jan 7, 2012
  *      Author: martani

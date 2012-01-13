@@ -1,5 +1,5 @@
 /*
- * qs.c
+ * qs_distributed.c
  *
  *  Created on: Jan 12, 2012
  *      Author: martani

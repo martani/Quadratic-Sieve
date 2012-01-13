@@ -1,5 +1,5 @@
 /*
- * qs.c
+ * custom_types.h
  *
  *  Created on: Jan 12, 2012
  *      Author: martani
